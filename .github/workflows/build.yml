@@ -52,6 +52,8 @@ jobs:
           )
           Path(os.environ["RUNNER_TEMP"], "vfpu-vaddq.bin").write_bytes(pack("<14I", *words))
           PY
+          unzip -q dist/*ghidra-allegrex.zip -d "$GHIDRA_INSTALL_DIR/Ghidra/Extensions"
+          test -f "$GHIDRA_INSTALL_DIR/Ghidra/Extensions/ghidra-allegrex/extension.properties"
           "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$RUNNER_TEMP/ghidra-vfpu" vfpu-vaddq \
             -import "$RUNNER_TEMP/vfpu-vaddq.bin" -loader BinaryLoader \
             -loader-baseAddr 0x08804000 -processor Allegrex:LE:32:default \

@@ -72,6 +72,31 @@ jobs:
             -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
             -postScript VfpuMtvcMaskSmoke.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-mtvc-mask.log"
           grep -q 'VFPU_MTVC_MASK_COMPLETE' "$RUNNER_TEMP/vfpu-mtvc-mask.log"
+      - name: Verify mtvc register boundary cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re, struct
+          from pathlib import Path
+          src = Path("src/test/fixtures/vfpu-mtvc-mask-edges.S").read_text()
+          words = [int(word, 16) for word in re.findall(r"^\s*\.word\s+(0x[0-9a-fA-F]{8})", src, re.M)]
+          assert len(words) == 7
+          Path(os.environ["RUNNER_TEMP"], "vfpu-mtvc-edges.bin").write_bytes(struct.pack("<7I", *words))
+          PY
+          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$RUNNER_TEMP/ghidra-vfpu-control" vfpu-mtvc-edges \
+            -import "$RUNNER_TEMP/vfpu-mtvc-edges.bin" -loader BinaryLoader \
+            -loader-baseAddr 0x08804000 -processor Allegrex:LE:32:default \
+            -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
+            -postScript VfpuMtvcMaskEdges.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-mtvc-edges.log"
+          grep -q 'VFPU_MTVC_EDGES_COMPLETE' "$RUNNER_TEMP/vfpu-mtvc-edges.log"
+      - name: Preserve mtvc boundary regression log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vfpu-mtvc-edges-for-Ghidra-${{ matrix.ghidra }}
+          path: ${{ runner.temp }}/vfpu-mtvc-edges.log
+          if-no-files-found: ignore
       - name: Preserve mtvc mask regression log
         if: always()
         uses: actions/upload-artifact@v4

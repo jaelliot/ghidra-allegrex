@@ -81,6 +81,23 @@ jobs:
             -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
             -postScript VfpuVmtvcMaskEdges.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vmtvc-edges.log"
           grep -q 'VFPU_VMTVC_EDGES_COMPLETE' "$RUNNER_TEMP/vmtvc-edges.log"
+      - name: Compare full Ghidra control output with PPSSPP oracle
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$RUNNER_TEMP/ghidra-control" integration \
+            -import "$RUNNER_TEMP/vfpu-control-transfers.bin" -loader BinaryLoader \
+            -loader-baseAddr 0x08804000 -processor Allegrex:LE:32:default \
+            -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
+            -postScript VfpuControlIntegrationSmoke.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-control-integration.log"
+          grep -q 'VFPU_CTRL_INTEGRATION_PASS' "$RUNNER_TEMP/vfpu-control-integration.log"
+      - name: Preserve full VFPU control comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vfpu-control-combined-Ghidra-${{ matrix.ghidra }}
+          path: ${{ runner.temp }}/vfpu-control-integration.log
+          if-no-files-found: ignore
       - name: Preserve vmtvc regression logs
         if: always()
         uses: actions/upload-artifact@v4

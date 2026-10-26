@@ -27,9 +27,17 @@ public class VfpuControlMappingSmoke extends GhidraScript {
         }
         int matched = 0;
         for (PcodeOp op : ins.getPcode()) {
-            if (op.getOpcode() != PcodeOp.COPY || op.getOutput() == null
-                    || !op.getOutput().isRegister()
+            if (op.getOutput() == null || !op.getOutput().isRegister()
                     || op.getOutput().getOffset() != dest) continue;
+            if ("vmtvc".equals(mnemonic)) {
+                if (op.getOpcode() == PcodeOp.INT_AND && op.getNumInputs() == 2
+                        && op.getInput(0).isRegister()
+                        && op.getInput(0).getOffset() == source
+                        && op.getInput(1).isConstant()
+                        && op.getInput(1).getOffset() == 0xfffff) matched++;
+                continue;
+            }
+            if (op.getOpcode() != PcodeOp.COPY) continue;
             Varnode in = op.getInput(0);
             if (constant && in.isConstant() && in.getOffset() == source
                     || !constant && in.isRegister() && in.getOffset() == source) matched++;

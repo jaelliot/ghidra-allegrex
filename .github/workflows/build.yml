@@ -72,6 +72,31 @@ jobs:
             -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
             -postScript VfpuControlTransferMappingSmoke.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-control-mapping.log"
           grep -q 'VFPU_CTRL_MAPPING_COMPLETE' "$RUNNER_TEMP/vfpu-control-mapping.log"
+      - name: Verify vmfvc selector boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re, struct
+          from pathlib import Path
+          text = Path("src/test/fixtures/vfpu-ctl-selector-edges.S").read_text()
+          words = [int(word, 16) for word in re.findall(r"^\s*\.word\s+(0x[0-9a-fA-F]{8})", text, re.M)]
+          assert len(words) == 3
+          Path(os.environ["RUNNER_TEMP"], "vfpu-selector.bin").write_bytes(struct.pack("<3I", *words))
+          PY
+          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$RUNNER_TEMP/ghidra-vfpu-control" vfpu-control-selector \
+            -import "$RUNNER_TEMP/vfpu-selector.bin" -loader BinaryLoader \
+            -loader-baseAddr 0x08804000 -processor Allegrex:LE:32:default \
+            -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
+            -postScript VfpuControlSelectorSmoke.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-selector-smoke.log"
+          grep -q 'VFPU_CTRL_SELECTOR_COMPLETE' "$RUNNER_TEMP/vfpu-selector-smoke.log"
+      - name: Preserve vmfvc selector regression log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vfpu-selector-regression-for-Ghidra-${{ matrix.ghidra }}
+          path: ${{ runner.temp }}/vfpu-selector-smoke.log
+          if-no-files-found: ignore
       - name: Preserve VFPU control-mapping evidence
         if: always()
         uses: actions/upload-artifact@v4

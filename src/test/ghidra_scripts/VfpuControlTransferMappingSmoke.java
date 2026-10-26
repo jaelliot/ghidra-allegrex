@@ -24,13 +24,14 @@ public class VfpuControlTransferMappingSmoke extends GhidraScript {
                     && op.getInput(1).isConstant() && op.getInput(1).getOffset() == 0xfffff) {
                 reads++;
             }
-            if (op.getOpcode() != PcodeOp.COPY || op.getOutput() == null
-                    || !op.getOutput().isRegister()
+            if (op.getOutput() == null || !op.getOutput().isRegister()
                     || op.getOutput().getOffset() != expectedDest) continue;
-            writes++;
-            Varnode input = op.getInput(0);
-            if ("vmfvc".equals(mnemonic) && input.isRegister()
-                    && input.getOffset() == expectedSource) {
+            if ("vmtvc".equals(mnemonic) || op.getOpcode() == PcodeOp.COPY) {
+                writes++;
+            }
+            if ("vmfvc".equals(mnemonic) && op.getOpcode() == PcodeOp.COPY
+                    && op.getInput(0).isRegister()
+                    && op.getInput(0).getOffset() == expectedSource) {
                 reads++;
             }
         }

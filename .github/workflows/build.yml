@@ -56,6 +56,40 @@ jobs:
             -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
             -postScript VfpuControlMappingSmoke.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-control-mapping.log"
           grep -q 'VFPU_CTRL_MAPPING_REVIEW_PASS' "$RUNNER_TEMP/vfpu-control-mapping.log"
+      - name: Verify vmtvc control write masks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re, struct
+          for name, count in (("vfpu-control-transfers", 28), ("vfpu-vmtvc-mask-edges", 7)):
+              source = Path("src/test/fixtures", name + ".S").read_text()
+              words = [int(w, 16) for w in re.findall(r"^\s*\.word\s+(0x[0-9a-fA-F]{8})", source, re.M)]
+              assert len(words) == count, (name, len(words))
+              Path(os.environ["RUNNER_TEMP"], name + ".bin").write_bytes(struct.pack("<" + str(count) + "I", *words))
+          PY
+          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$RUNNER_TEMP/ghidra-control" vmtvc-core \
+            -import "$RUNNER_TEMP/vfpu-control-transfers.bin" -loader BinaryLoader \
+            -loader-baseAddr 0x08804000 -processor Allegrex:LE:32:default \
+            -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
+            -postScript VfpuVmtvcMaskSmoke.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vmtvc-core.log"
+          grep -q 'VFPU_VMTVC_MASK_COMPLETE' "$RUNNER_TEMP/vmtvc-core.log"
+          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$RUNNER_TEMP/ghidra-control" vmtvc-edges \
+            -import "$RUNNER_TEMP/vfpu-vmtvc-mask-edges.bin" -loader BinaryLoader \
+            -loader-baseAddr 0x08804000 -processor Allegrex:LE:32:default \
+            -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
+            -postScript VfpuVmtvcMaskEdges.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vmtvc-edges.log"
+          grep -q 'VFPU_VMTVC_EDGES_COMPLETE' "$RUNNER_TEMP/vmtvc-edges.log"
+      - name: Preserve vmtvc regression logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmtvc-control-mask-Ghidra-${{ matrix.ghidra }}
+          path: |
+            ${{ runner.temp }}/vmtvc-core.log
+            ${{ runner.temp }}/vmtvc-edges.log
+          if-no-files-found: ignore
       - name: Preserve VFPU control mapping regression
         if: always()
         uses: actions/upload-artifact@v4

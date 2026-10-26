@@ -31,8 +31,25 @@ define pcodeop vcmp_q;
 :vmfvc vd_s, VfpuCtlSource        is prime=52 & vop3 = 0 & vt = 80 & vd_s & vd & VfpuCtlSource {
     vd = VfpuCtlSource;
 }
-:vmtvc vs_s, VfpuCtl              is prime=52 & vop3 = 0 & vt = 81 & vs_s & vs & VfpuCtl {
+# vmtvc shares mtvc's control-register masks, but its source is a VFPU scalar.
+:vmtvc vs_s, VfpuCtl              is prime=52 & vop3 = 0 & vt = 81 & vs_s & vs & VfpuCtl & vd_ctl < 2 {
+    VfpuCtl = vs & 0x000fffff;
+}
+:vmtvc vs_s, VfpuCtl              is prime=52 & vop3 = 0 & vt = 81 & vs_s & vs & VfpuCtl & vd_ctl = 2 {
+    VfpuCtl = vs & 0x00000fff;
+}
+:vmtvc vs_s, VfpuCtl              is prime=52 & vop3 = 0 & vt = 81 & vs_s & vs & VfpuCtl & vd_ctl = 3 {
+    VfpuCtl = vs & 0x0000003f;
+}
+:vmtvc vs_s, VfpuCtl              is prime=52 & vop3 = 0 & vt = 81 & vs_s & vs & VfpuCtl & vd_ctl = 4 {
     VfpuCtl = vs;
+}
+:vmtvc vs_s, VfpuCtl              is prime=52 & vop3 = 0 & vt = 81 & vs_s & vs & VfpuCtl & vd_ctl >= 5 & vd_ctl <= 7 {
+}
+:vmtvc vs_s, VfpuCtl              is prime=52 & vop3 = 0 & vt = 81 & vs_s & vs & VfpuCtl & vd_ctl >= 8 & vd_ctl <= 15 {
+    VfpuCtl = (vs & 0x000fffff) | 0x3f800000;
+}
+:vmtvc vs_s, VfpuCtl              is prime=52 & vop3 = 0 & vt = 81 & vs_s & vs & VfpuCtl & vd_ctl >= 16 {
 }
 
 define pcodeop vcst_s;

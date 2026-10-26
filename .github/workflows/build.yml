@@ -62,6 +62,23 @@ jobs:
             -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
             -postScript VfpuControlBaseline.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-control-baseline.log"
           grep -q 'VFPU_CONTROL_BASELINE_COMPLETE' "$RUNNER_TEMP/vfpu-control-baseline.log"
+      - name: Verify mtvc control-register masks
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$RUNNER_TEMP/ghidra-vfpu-control" vfpu-mtvc-mask \
+            -import "$RUNNER_TEMP/vfpu-control.bin" -loader BinaryLoader \
+            -loader-baseAddr 0x08804000 -processor Allegrex:LE:32:default \
+            -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
+            -postScript VfpuMtvcMaskSmoke.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-mtvc-mask.log"
+          grep -q 'VFPU_MTVC_MASK_COMPLETE' "$RUNNER_TEMP/vfpu-mtvc-mask.log"
+      - name: Preserve mtvc mask regression log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vfpu-mtvc-mask-for-Ghidra-${{ matrix.ghidra }}
+          path: ${{ runner.temp }}/vfpu-mtvc-mask.log
+          if-no-files-found: ignore
       - name: Preserve VFPU control-transfer evidence
         if: always()
         uses: actions/upload-artifact@v4

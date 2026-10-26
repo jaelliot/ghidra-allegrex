@@ -61,3 +61,26 @@ These are actual Ghidra outputs; the PPSSPP expectations above are
 source-derived, **not** yet direct emulator or hardware observations.
 The mask and operand-mapping discrepancies must be treated as distinct
 fixes, and changes must retain useful decoded pseudocode.
+
+
+## Scalar-transfer mapping experiment
+
+An isolated patch on `codex/vfpu-control-mapping-040e` was tested on
+[Ghidra 12.2 run #40247803622](https://github.com/jaelliot/ghidra-allegrex/actions/runs/40247803622)
+at commit `bc980024095badbca077bb77e2759dedc41fe3ed`.
+The instruction decoder and resulting p-code now agree for the two
+**defined-control-register** examples:
+
+- `vmtvc S000,TPFX`: `COPY` from scalar register `0x5000` to TPFX `0x5304`.
+- `vmfvc S000,TPFX`: `COPY` from TPFX `0x5304` to scalar register `0x5000`.
+
+The extension build, Sleigh compilation, baseline evidence capture, and
+focused mapping regression all passed. This fixes operand selection only.
+The write-mask and read-only discrepancies remain (the decompiled C still
+shows all ones where a masked value is expected).
+
+**Known boundary:** the new `VfpuCtlSource` constructor currently only
+maps selector values 0–15. PPSSPP returns zero for out-of-range
+`vmfvc` selectors, and Ghidra's previous table had placeholders for
+those encodings. Preserve or explicitly model that legacy decoding
+before treating this experimental branch as an upstream-ready patch.

@@ -40,3 +40,24 @@ raw disassembly, p-code and decompiled C. A green baseline means
 Do not submit this baseline as an upstream fix. Confirm any discrepancy
 with an independent execution oracle, and propose a separate surgical
 change only after that confirmation.
+
+
+## Captured Ghidra baseline
+
+The complete Ghidra 12.2 run [#40247312778](https://github.com/jaelliot/ghidra-allegrex/actions/runs/40247312778)
+passed its **capture** gate at source revision
+`6a5a09c87c98e9a47d7b2927b3b374bd97db4dff`.
+Raw probe SHA-256: `89bba60eebfd6e398d2211c0ab03c9c7241ae1c0cd04e823ebad2906f67c66f4`.
+
+Ghidra's decompiled C stores `0xffffffff` at offsets 0, 4, 8, 12
+and 20 (instead of masking the writes or respecting read-only RSV5);
+it also stores zero at 24 and `0xffffffff` at 28.
+The disassembly shows `vmtvc S000,TPFX` at word 20 but its p-code is
+`COPY (const,0)` to `TPFX`. Word 23 **should be**
+`vmfvc S000,TPFX` from encoding bits 8–14, but is shown as
+`vmfvc S000,SPFX` and outputs `COPY (...)` to `(const,0)`.
+
+These are actual Ghidra outputs; the PPSSPP expectations above are
+source-derived, **not** yet direct emulator or hardware observations.
+The mask and operand-mapping discrepancies must be treated as distinct
+fixes, and changes must retain useful decoded pseudocode.

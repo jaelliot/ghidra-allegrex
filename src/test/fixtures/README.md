@@ -79,8 +79,11 @@ focused mapping regression all passed. This fixes operand selection only.
 The write-mask and read-only discrepancies remain (the decompiled C still
 shows all ones where a masked value is expected).
 
-**Known boundary:** the new `VfpuCtlSource` constructor currently only
-maps selector values 0–15. PPSSPP returns zero for out-of-range
-`vmfvc` selectors, and Ghidra's previous table had placeholders for
-those encodings. Preserve or explicitly model that legacy decoding
-before treating this experimental branch as an upstream-ready patch.
+**Selector boundary verified:** `VfpuCtlSource` now preserves the
+existing scalar-register names for selectors 16–126 and `(interlock)`
+for selector 127. These invalid control selectors lift to zero, rather
+than an unrelated control register, while selector 15 still reads RCX7.
+All three were checked by Ghidra 12.2 in
+[run #40250785203](https://github.com/jaelliot/ghidra-allegrex/actions/runs/40250785203).
+The fixture and p-code tests passed. This validates static instruction
+semantics, **not** observed behavior on original PSP hardware.

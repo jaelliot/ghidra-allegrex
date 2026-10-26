@@ -36,6 +36,39 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew buildExtension
+      - name: Capture VFPU control-transfer baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          import struct
+          import hashlib
+          from pathlib import Path
+          source = Path("src/test/fixtures/vfpu-control-transfers.S").read_text()
+          words = [int(w, 16) for w in re.findall(r"^\s*\.word\s+(0x[0-9a-fA-F]{8})", source, re.M)]
+          if len(words) != 28:
+              raise RuntimeError(f"Expected 28 words, got {len(words)}")
+          raw = struct.pack("<28I", *words)
+          Path(os.environ["RUNNER_TEMP"], "vfpu-control.bin").write_bytes(raw)
+          print("VFPU_CONTROL_FIXTURE_SHA256=" + hashlib.sha256(raw).hexdigest())
+          PY
+          unzip -q dist/*ghidra-allegrex.zip -d "$GHIDRA_INSTALL_DIR/Ghidra/Extensions"
+          mkdir -p "$RUNNER_TEMP/ghidra-vfpu-control"
+          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$RUNNER_TEMP/ghidra-vfpu-control" vfpu-control \
+            -import "$RUNNER_TEMP/vfpu-control.bin" -loader BinaryLoader \
+            -loader-baseAddr 0x08804000 -processor Allegrex:LE:32:default \
+            -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
+            -postScript VfpuControlBaseline.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-control-baseline.log"
+          grep -q 'VFPU_CONTROL_BASELINE_COMPLETE' "$RUNNER_TEMP/vfpu-control-baseline.log"
+      - name: Preserve VFPU control-transfer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vfpu-control-baseline-for-Ghidra-${{ matrix.ghidra }}
+          path: ${{ runner.temp }}/vfpu-control-baseline.log
+          if-no-files-found: ignore
       - name: Upload artifact to workflow
         uses: actions/upload-artifact@v4
         with:

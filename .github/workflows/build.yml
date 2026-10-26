@@ -62,6 +62,23 @@ jobs:
             -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
             -postScript VfpuControlBaseline.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-control-baseline.log"
           grep -q 'VFPU_CONTROL_BASELINE_COMPLETE' "$RUNNER_TEMP/vfpu-control-baseline.log"
+      - name: Verify VFPU control scalar mapping
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GHIDRA_INSTALL_DIR/support/analyzeHeadless" "$RUNNER_TEMP/ghidra-vfpu-control" vfpu-control-mapping \
+            -import "$RUNNER_TEMP/vfpu-control.bin" -loader BinaryLoader \
+            -loader-baseAddr 0x08804000 -processor Allegrex:LE:32:default \
+            -cspec default -noanalysis -scriptPath "$GITHUB_WORKSPACE/src/test/ghidra_scripts" \
+            -postScript VfpuControlTransferMappingSmoke.java -deleteProject 2>&1 | tee "$RUNNER_TEMP/vfpu-control-mapping.log"
+          grep -q 'VFPU_CTRL_MAPPING_COMPLETE' "$RUNNER_TEMP/vfpu-control-mapping.log"
+      - name: Preserve VFPU control-mapping evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vfpu-control-mapping-for-Ghidra-${{ matrix.ghidra }}
+          path: ${{ runner.temp }}/vfpu-control-mapping.log
+          if-no-files-found: ignore
       - name: Preserve VFPU control-transfer evidence
         if: always()
         uses: actions/upload-artifact@v4

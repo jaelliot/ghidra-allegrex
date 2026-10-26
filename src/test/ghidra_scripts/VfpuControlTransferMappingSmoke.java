@@ -16,20 +16,29 @@ public class VfpuControlTransferMappingSmoke extends GhidraScript {
                 || !ins.toString().contains("S000,TPFX")) {
             throw new IllegalStateException("Wrong control-transfer decoding at " + index + ": " + ins);
         }
-        int copies = 0;
+        int reads = 0, writes = 0;
         for (PcodeOp op : ins.getPcode()) {
+            if ("vmtvc".equals(mnemonic) && op.getOpcode() == PcodeOp.INT_AND
+                    && op.getNumInputs() == 2
+                    && op.getInput(0).isRegister() && op.getInput(0).getOffset() == expectedSource
+                    && op.getInput(1).isConstant() && op.getInput(1).getOffset() == 0xfffff) {
+                reads++;
+            }
             if (op.getOpcode() != PcodeOp.COPY || op.getOutput() == null
-                    || !op.getOutput().isRegister()) continue;
+                    || !op.getOutput().isRegister()
+                    || op.getOutput().getOffset() != expectedDest) continue;
+            writes++;
             Varnode input = op.getInput(0);
-            if (input.isRegister() && op.getOutput().getOffset() == expectedDest
+            if ("vmfvc".equals(mnemonic) && input.isRegister()
                     && input.getOffset() == expectedSource) {
-                copies++;
+                reads++;
             }
         }
-        if (copies != 1) {
-            throw new IllegalStateException(mnemonic + " should copy VFPU registers "
-                    + Long.toHexString(expectedSource) + " -> " + Long.toHexString(expectedDest)
-                    + ", got " + copies + " valid copies");
+        if (reads != 1 || writes != 1) {
+            throw new IllegalStateException(mnemonic + " must use source register "
+                    + Long.toHexString(expectedSource) + " and write destination "
+                    + Long.toHexString(expectedDest) + ", got reads=" + reads
+                    + " writes=" + writes);
         }
         println("VFPU_CTRL_MAPPING_PASS index=" + index + " mnemonic=" + mnemonic);
     }

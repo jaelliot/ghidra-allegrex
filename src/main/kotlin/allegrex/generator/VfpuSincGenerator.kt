@@ -469,14 +469,14 @@ private class InstructionGeneratorOp3(
     }
     builder.append("${vd.matcher} & ${vs.matcher} & ${vt.matcher}")
     if (GENERATE_IMPLEMENTATION) {
-      if (name == "vadd" && variant == Variant.Q) {
+      if (variant == Variant.Q && name in listOf("vadd", "vsub", "vmul")) {
         // Retain destination and prefix dependencies until lane semantics replace the opaque operation.
         builder.append(
           """   {
           |    local op1:16 = vfpuReadQ(vs);
           |    local op2:16 = vfpuReadQ(vt);
           |    local previous:16 = vfpuReadQ(vd);
-          |    local result:16 = vadd_q(previous, op1, op2, SPFX, TPFX, DPFX);
+          |    local result:16 = $pcodeName(previous, op1, op2, SPFX, TPFX, DPFX);
           |    SPFX = 0xe4;
           |    TPFX = 0xe4;
           |    DPFX = 0;

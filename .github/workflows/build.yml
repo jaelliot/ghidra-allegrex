@@ -48,9 +48,11 @@ jobs:
               0xd8800000, 0xd8a40000, 0xdc0000e4, 0xdd0000e4,
               0xde000000, 0x60048090, 0xf8d00000, 0xdc0000c6,
               0x60048090, 0xf8d00010, 0x60048090, 0xf8d00020,
-              0x03e00008, 0x00000000,
+              0xdc0000e4, 0x60848090, 0xf8d00030, 0xdc0000c6,
+              0xdd0000e4, 0x64048090, 0xf8d00040, 0x03e00008,
+              0x00000000,
           )
-          Path(os.environ["RUNNER_TEMP"], "vfpu-vaddq.bin").write_bytes(pack("<14I", *words))
+          Path(os.environ["RUNNER_TEMP"], "vfpu-vaddq.bin").write_bytes(pack("<21I", *words))
           PY
           unzip -q dist/*ghidra-allegrex.zip -d "$GHIDRA_INSTALL_DIR/Ghidra/Extensions"
           test -f "$GHIDRA_INSTALL_DIR/Ghidra/Extensions/ghidra-allegrex/extension.properties"

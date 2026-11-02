@@ -19,11 +19,13 @@ public class VfpuVaddQPrefixSmoke extends GhidraScript {
         0xd8800000, 0xd8a40000, 0xdc0000e4, 0xdd0000e4,
         0xde000000, 0x60048090, 0xf8d00000, 0xdc0000c6,
         0x60048090, 0xf8d00010, 0x60048090, 0xf8d00020,
-        0x03e00008, 0x00000000
+        0xdc0000e4, 0x60848090, 0xf8d00030, 0xdc0000c6,
+        0xdd0000e4, 0x64048090, 0xf8d00040, 0x03e00008,
+        0x00000000
     };
-    private static final int[] ADD_SITES = {5, 8, 10};
-    private static final int[] PREFIX_SITES = {2, 3, 4, 7};
-    private static final String[] PREFIX_MNEMONICS = {"vpfxs", "vpfxt", "vpfxd", "vpfxs"};
+    private static final int[] BINARY_SITES = {5, 8, 10, 13, 17};
+    private static final int[] PREFIX_SITES = {2, 3, 4, 7, 12, 15, 16};
+    private static final String[] PREFIX_MNEMONICS = {"vpfxs", "vpfxt", "vpfxd", "vpfxs", "vpfxs", "vpfxs", "vpfxt"};
     private static final long[] PREFIX_REGISTERS = {0x5300, 0x5304, 0x5308};
     private static final long[] CONSUMED_STATE = {0xe4, 0xe4, 0};
 
@@ -53,10 +55,11 @@ public class VfpuVaddQPrefixSmoke extends GhidraScript {
             if (!hasCall) throw new IllegalStateException("Prefix call lost at " + PREFIX_SITES[i]);
         }
 
-        for (int site : ADD_SITES) {
+        for (int site : BINARY_SITES) {
+            String mnemonic = site == 13 ? "vsub.q" : site == 17 ? "vmul.q" : "vadd.q";
             Instruction ins = currentProgram.getListing().getInstructionAt(start.add(site * 4L));
-            if (ins == null || !"vadd.q".equals(ins.getMnemonicString())) {
-                throw new IllegalStateException("Expected vadd.q at word " + site);
+            if (ins == null || !mnemonic.equals(ins.getMnemonicString())) {
+                throw new IllegalStateException("Expected " + mnemonic + " at word " + site);
             }
             int opaqueOps = 0;
             int floatAdds = 0;
@@ -90,16 +93,16 @@ public class VfpuVaddQPrefixSmoke extends GhidraScript {
             }
             // Read source, target and old destination; opaque arithmetic; write destination.
             if (opaqueOps != 5 || floatAdds != 0) {
-                throw new IllegalStateException("Unexpected vadd.q p-code at " + site
+                throw new IllegalStateException("Unexpected " + mnemonic + " p-code at " + site
                         + ": CALLOTHER=" + opaqueOps + " FLOAT_ADD=" + floatAdds);
             }
-            println("VFPU_VADDQ_PASS word=" + site + " prefix_inputs=3 prefix_resets=3 callother=5");
+            println("VFPU_BINARY_Q_PASS opcode=" + mnemonic + " word=" + site + " prefix_inputs=3 prefix_resets=3 callother=5");
         }
 
         Function function = currentProgram.getFunctionManager().getFunctionAt(start);
         if (function == null) {
             function = currentProgram.getFunctionManager().createFunction(
-                "vfpu_prefix_probe", start, new AddressSet(start, start.add(55)), SourceType.USER_DEFINED);
+                "vfpu_prefix_probe", start, new AddressSet(start, start.add(WORDS.length * 4L - 1)), SourceType.USER_DEFINED);
         }
         if (function == null) throw new IllegalStateException("Could not create fixture function");
 
@@ -136,7 +139,18 @@ public class VfpuVaddQPrefixSmoke extends GhidraScript {
             if (!calls.get(2).endsWith(",0xe4,0xe4,0)")) {
                 throw new IllegalStateException("Prefixes were not consumed for third vadd_q: " + calls.get(2));
             }
+            // Arithmetic is intentionally still opaque, but both additional
+            // binary operations must remain observable in the same C function.
+            for (String extra : new String[]{"vsub_q", "vmul_q"}) {
+                Matcher binary = Pattern.compile(extra + "\\([^;]*\\)").matcher(pseudocode);
+                int count = 0;
+                while (binary.find()) count++;
+                if (count != 1) {
+                    throw new IllegalStateException("Expected one " + extra + " call, got " + count);
+                }
+            }
             println("VFPU_VADDQ_DECOMP_PASS calls=3 decoded_prefixes=visible swizzle_and_consumption=visible");
+            println("VFPU_VSUB_VMUL_DECOMP_PASS calls=2 prefix_dependencies=visible");
         } finally {
             decompiler.dispose();
         }

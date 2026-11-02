@@ -18,5 +18,15 @@
     .word 0xd0507f00  /* vmfvc S000,(interlock): invalid control selector */
     .word 0x48690000  /* mfv t1,S000 */
     .word 0xac890008  /* sw t1,8(a0) */
+    .word 0x2408ffff  /* addiu t0,zero,-1 */
+    .word 0x48e80000  /* mtv t0,S000 */
+    .word 0xd0510000  /* vmtvc S000,SPFX: 20-bit mask */
+    .word 0xd0510002  /* vmtvc S000,DPFX: 12-bit mask */
+    .word 0xd0510003  /* vmtvc S000,CC: 6-bit mask */
+    .word 0xd0510004  /* vmtvc S000,INF4: full write */
+    .word 0xd0510005  /* vmtvc S000,RSV5: read only */
+    .word 0xd0510008  /* vmtvc S000,RCX0: masked and forced high bits */
+    .word 0xd0510010  /* vmtvc S000,S400: invalid selector */
+    .word 0xd051007f  /* vmtvc S000,(interlock): invalid selector */
     .word 0x03e00008  /* jr ra */
     .word 0x00000000  /* nop */

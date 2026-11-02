@@ -90,7 +90,7 @@ public class VfpuControlMappingSmoke extends GhidraScript {
             }
         }
         if (!disassemble(start)) throw new IllegalStateException("Cannot disassemble fixture");
-        verify(start, 2, "vmtvc", "S000,TPFX", 0x5304, 0x5000, false);
+        verifyVmtvc(start, 2, "TPFX", 0x5304, 0xfffffL, false);
         verify(start, 5, "vmfvc", "S000,TPFX", 0x5000, 0x5304, false);
         verify(start, 8, "vmfvc", "S000,S400", 0x5000, 0, true);
         verify(start, 11, "vmfvc", "(interlock)", 0x5000, 0, true);

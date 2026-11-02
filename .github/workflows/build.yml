@@ -45,8 +45,8 @@ jobs:
           import os, re, struct
           source = Path("src/test/fixtures/vfpu-control-mapping.S").read_text()
           words = [int(w, 16) for w in re.findall(r"^\s*\.word\s+(0x[0-9a-fA-F]{8})", source, re.M)]
-          assert len(words) == 16
-          Path(os.environ["RUNNER_TEMP"], "vfpu-control-mapping.bin").write_bytes(struct.pack("<16I", *words))
+          assert len(words) == 26
+          Path(os.environ["RUNNER_TEMP"], "vfpu-control-mapping.bin").write_bytes(struct.pack("<26I", *words))
           PY
           unzip -q dist/*ghidra-allegrex.zip -d "$GHIDRA_INSTALL_DIR/Ghidra/Extensions"
           mkdir -p "$RUNNER_TEMP/ghidra-control"

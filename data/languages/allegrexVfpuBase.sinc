@@ -216,6 +216,12 @@ define pcodeop vfpuWriteMatrix4;
 # VFPU Tables
 # Some additional tables are in allegrexVfpuGenerated.sinc
 
+macro vfpuConsumePrefixes() {
+    SPFX = 0xe4;
+    TPFX = 0xe4;
+    DPFX = 0;
+}
+
 VfpuCtl: "SPFX" is vd_ctl = 0x0 { export SPFX; }
 VfpuCtl: "TPFX" is vd_ctl = 0x1 { export TPFX; }
 VfpuCtl: "DPFX" is vd_ctl = 0x2 { export DPFX; }

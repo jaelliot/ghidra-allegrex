@@ -17,13 +17,18 @@ import java.util.regex.Pattern;
 public class VfpuVaddQPrefixSmoke extends GhidraScript {
     private static final int[] WORDS = {
         0xd8800000, 0xd8a40000, 0xdc0000e4, 0xdd0000e4,
-        0xde000000, 0x60048090, 0xf8d00000, 0xdc0000c6,
-        0x60048090, 0xf8d00010, 0x60048090, 0xf8d00020,
+        0xde000000, 0x60048090, 0xf8d00000,
+        0xdc0000c6, 0xffff0000, 0x60048090, 0xf8d00010,
+        0x60048090, 0xf8d00020,
+        0xdc00001b, 0xdd00001b, 0xde000100, 0x60848090, 0x60048090, 0xf8d00030,
+        0xdc00001b, 0xfc000000, 0x60048090, 0xf8d00040,
         0x03e00008, 0x00000000
     };
-    private static final int[] ADD_SITES = {5, 8, 10};
-    private static final int[] PREFIX_SITES = {2, 3, 4, 7};
-    private static final String[] PREFIX_MNEMONICS = {"vpfxs", "vpfxt", "vpfxd", "vpfxs"};
+    private static final int[] ADD_SITES = {5, 9, 11, 17, 21};
+    private static final int[] PREFIX_SITES = {2, 3, 4, 7, 13, 14, 15, 19};
+    private static final String[] PREFIX_MNEMONICS = {
+        "vpfxs", "vpfxt", "vpfxd", "vpfxs", "vpfxs", "vpfxt", "vpfxd", "vpfxs"
+    };
     private static final long[] PREFIX_REGISTERS = {0x5300, 0x5304, 0x5308};
     private static final long[] CONSUMED_STATE = {0xe4, 0xe4, 0};
 
@@ -99,7 +104,8 @@ public class VfpuVaddQPrefixSmoke extends GhidraScript {
         Function function = currentProgram.getFunctionManager().getFunctionAt(start);
         if (function == null) {
             function = currentProgram.getFunctionManager().createFunction(
-                "vfpu_prefix_probe", start, new AddressSet(start, start.add(55)), SourceType.USER_DEFINED);
+                "vfpu_prefix_probe", start, new AddressSet(start, start.add(WORDS.length * 4L - 1)),
+                SourceType.USER_DEFINED);
         }
         if (function == null) throw new IllegalStateException("Could not create fixture function");
 
@@ -119,8 +125,8 @@ public class VfpuVaddQPrefixSmoke extends GhidraScript {
             Matcher matcher = Pattern.compile("vadd_q\\([^;]*\\)").matcher(pseudocode);
             List<String> calls = new ArrayList<>();
             while (matcher.find()) calls.add(matcher.group().replaceAll("\\s+", "").toLowerCase());
-            if (calls.size() != 3) {
-                throw new IllegalStateException("Expected three vadd_q calls, got " + calls.size());
+            if (calls.size() != ADD_SITES.length) {
+                throw new IllegalStateException("Expected " + ADD_SITES.length + " vadd_q calls, got " + calls.size());
             }
             String identitySource = assignedPrefix(pseudocode, "vpfxs(0,1,2,3)");
             String identityTarget = assignedPrefix(pseudocode, "vpfxt(0,1,2,3)");
@@ -131,12 +137,16 @@ public class VfpuVaddQPrefixSmoke extends GhidraScript {
                 throw new IllegalStateException("Original decoded prefixes not used by first vadd_q: " + calls.get(0));
             }
             if (!calls.get(1).endsWith("," + swizzledSource + ",0xe4,0)")) {
-                throw new IllegalStateException("Swizzled source prefix not used by second vadd_q: " + calls.get(1));
+                throw new IllegalStateException("Swizzled source prefix lost across the prefix-preserving encoding: "
+                        + calls.get(1));
             }
-            if (!calls.get(2).endsWith(",0xe4,0xe4,0)")) {
-                throw new IllegalStateException("Prefixes were not consumed for third vadd_q: " + calls.get(2));
+            for (int i = 2; i < calls.size(); i++) {
+                if (!calls.get(i).endsWith(",0xe4,0xe4,0)")) {
+                    throw new IllegalStateException("Stale prefixes in vadd_q at word " + ADD_SITES[i]
+                            + ": " + calls.get(i));
+                }
             }
-            println("VFPU_VADDQ_DECOMP_PASS calls=3 decoded_prefixes=visible swizzle_and_consumption=visible");
+            println("VFPU_VADDQ_DECOMP_PASS calls=" + calls.size() + " decoded_prefixes=visible mixed_consumers=verified");
         } finally {
             decompiler.dispose();
         }

@@ -7,24 +7,28 @@ define pcodeop vcmp_q;
     local op2:4 = vt;
     local cmpOp:1 = vd_cmp:1 & 0xf:1;
     CC = vcmp_s(cmpOp, op1, op2);
+    vfpuConsumePrefixes();
 }
 :vcmp.p vd_cmp, vs_p, vt_p        is prime=27 & vop3 = 0 & vc1 = 0 & vc0 = 1 & vd_cmp & vs_p & vs & vt_p & vt {
     local op1:8 = vfpuReadP(vs);
     local op2:8 = vfpuReadP(vt);
     local cmpOp:1 = vd_cmp:1 & 0xf:1;
     CC = vcmp_p(cmpOp, op1, op2);
+    vfpuConsumePrefixes();
 }
 :vcmp.t vd_cmp, vs_t, vt_t        is prime=27 & vop3 = 0 & vc1 = 1 & vc0 = 0 & vd_cmp & vs_t & vs & vt_t & vt {
     local op1:12 = vfpuReadT(vs);
     local op2:12 = vfpuReadT(vt);
     local cmpOp:1 = vd_cmp:1 & 0xf:1;
     CC = vcmp_t(cmpOp, op1, op2);
+    vfpuConsumePrefixes();
 }
 :vcmp.q vd_cmp, vs_q, vt_q        is prime=27 & vop3 = 0 & vc1 = 1 & vc0 = 1 & vd_cmp & vs_q & vs & vt_q & vt {
     local op1:16 = vfpuReadQ(vs);
     local op2:16 = vfpuReadQ(vt);
     local cmpOp:1 = vd_cmp:1 & 0xf:1;
     CC = vcmp_q(cmpOp, op1, op2);
+    vfpuConsumePrefixes();
 }
 
 # FIXME: this doesn't correctly model the behaviour for read only registers and registers outside control register range (unlikely to be in normal code?)
@@ -41,21 +45,25 @@ define pcodeop vcst_t;
 define pcodeop vcst_q;
 :vcst.s vd_s, vt_cst              is prime=52 & vop3 = 0 & vtop2 = 3 & vc1 = 0 & vc0 = 0 & vd_s & vd & vt_cst {
     vd = vcst_s(vt_cst:1);
+    vfpuConsumePrefixes();
 }
 
 :vcst.p vd_p, vt_cst              is prime=52 & vop3 = 0 & vtop2 = 3 & vc1 = 0 & vc0 = 1 & vd_p & vd & vt_cst {
     local result:8 = vcst_p(vt_cst:1);
     vfpuWriteP(vd, result[0,32], result[32,32]);
+    vfpuConsumePrefixes();
 }
 
 :vcst.t vd_t, vt_cst              is prime=52 & vop3 = 0 & vtop2 = 3 & vc1 = 1 & vc0 = 0 & vd_t & vd & vt_cst {
     local result:12 = vcst_t(vt_cst:1);
     vfpuWriteT(vd, result[0,32], result[32,32], result[64,32]);
+    vfpuConsumePrefixes();
 }
 
 :vcst.q vd_q, vt_cst              is prime=52 & vop3 = 0 & vtop2 = 3 & vc1 = 1 & vc0 = 1 & vd_q & vd & vt_cst {
     local result:16 = vcst_q(vt_cst:1);
     vfpuWriteQ(vd, result[0,32], result[32,32], result[64,32], result[96,32]);
+    vfpuConsumePrefixes();
 }
 
 define pcodeop vpfxs;
@@ -75,9 +83,11 @@ define pcodeop viim_s;
 define pcodeop vfim_s;
 :viim.s vt_s, immed               is prime=55 & vop3 = 6 & vt_s & vt & immed {
     vt = viim_s(immed:4);
+    vfpuConsumePrefixes();
 }
 :vfim.s vt_s, immed               is prime=55 & vop3 = 7 & vt_s & vt & immed {
     vt = vfim_s(immed:4);
+    vfpuConsumePrefixes();
 }
 
 define pcodeop vrot_s;
@@ -86,21 +96,30 @@ define pcodeop vrot_t;
 define pcodeop vrot_q;
 :vrot.s vd_s, vs_s, [VfpuRot0]                               is prime=60 & vop3 = 7 & vtop2 = 1 & vc1 = 0 & vc0 = 0 & vd_s & vd & vs_s & vs & VfpuRot0 {
     vd = vrot_s(vs, VfpuRot0);
+    vfpuConsumePrefixes();
 }
 :vrot.p vd_p, vs_s, [VfpuRot0, VfpuRot1]                     is prime=60 & vop3 = 7 & vtop2 = 1 & vc1 = 0 & vc0 = 1 & vd_p & vd & vs_s & vs & VfpuRot0 & VfpuRot1 {
     local result:8 = vrot_p(vs, VfpuRot0, VfpuRot1);
     vfpuWriteP(vd, result[0,32], result[32,32]);
+    vfpuConsumePrefixes();
 }
 :vrot.t vd_t, vs_s, [VfpuRot0, VfpuRot1, VfpuRot2]           is prime=60 & vop3 = 7 & vtop2 = 1 & vc1 = 1 & vc0 = 0 & vd_t & vd & vs_s & vs & VfpuRot0 & VfpuRot1 & VfpuRot2 {
     local result:12 = vrot_t(vs, VfpuRot0, VfpuRot1, VfpuRot2);
     vfpuWriteT(vd, result[0,32], result[32,32], result[64,32]);
+    vfpuConsumePrefixes();
 }
 :vrot.q vd_q, vs_s, [VfpuRot0, VfpuRot1, VfpuRot2, VfpuRot3] is prime=60 & vop3 = 7 & vtop2 = 1 & vc1 = 1 & vc0 = 1 & vd_q & vd & vs_s & vs & VfpuRot0 & VfpuRot1 & VfpuRot2 & VfpuRot3 {
     local result:16 = vrot_q(vs, VfpuRot0, VfpuRot1, VfpuRot2, VfpuRot3);
     vfpuWriteQ(vd, result[0,32], result[32,32], result[64,32], result[96,32]);
+    vfpuConsumePrefixes();
+}
+
+# The 0xffffxxxx encodings retain prefixes. Other vflush encodings consume them.
+:vflush                           is prime=63 & vop3=7 & vt=127 {
 }
 
 :vflush                           is prime=63 {
+    vfpuConsumePrefixes();
 }
 
 :bvf VfpuCC, Rel16                is prime=18 & copop = 8 & vndtf = 0 & VfpuCC & Rel16 {

@@ -347,6 +347,7 @@ private class InstructionGeneratorOp1(
         """   {
         |    local result:${vd.sleighSize} = $pcodeName();
         |    ${vd.sleighWriter("result")}
+        |    vfpuConsumePrefixes();
         |}
       """.trimMargin()
       )
@@ -417,6 +418,7 @@ private class InstructionGeneratorOp2(
         |    local op1:${vs.sleighSize} = ${vs.sleighReader};
         |    local result:${vd.sleighSize} = $pcodeName(op1);
         |    ${vd.sleighWriter("result")}
+        |    vfpuConsumePrefixes();
         |}
         |
       """.trimMargin()
@@ -477,10 +479,8 @@ private class InstructionGeneratorOp3(
           |    local op2:16 = vfpuReadQ(vt);
           |    local previous:16 = vfpuReadQ(vd);
           |    local result:16 = vadd_q(previous, op1, op2, SPFX, TPFX, DPFX);
-          |    SPFX = 0xe4;
-          |    TPFX = 0xe4;
-          |    DPFX = 0;
           |    vfpuWriteQ(vd, result[0,32], result[32,32], result[64,32], result[96,32]);
+          |    vfpuConsumePrefixes();
           |}
           |
         """.trimMargin()
@@ -492,6 +492,7 @@ private class InstructionGeneratorOp3(
           |    local op2:${vt.sleighSize} = ${vt.sleighReader};
           |    local result:${vd.sleighSize} = $pcodeName(op1, op2);
           |    ${vd.sleighWriter("result")}
+          |    vfpuConsumePrefixes();
           |}
           |
         """.trimMargin()
@@ -550,6 +551,7 @@ private class InstructionGeneratorOp3Imm(
         |    local op1:${vs.sleighSize} = ${vs.sleighReader};
         |    local result:${vd.sleighSize} = $pcodeName(op1, $immName:$immSize);
         |    ${vd.sleighWriter("result")}
+        |    vfpuConsumePrefixes();
         |}
         |
       """.trimMargin()

@@ -347,6 +347,7 @@ private class InstructionGeneratorOp1(
         """   {
         |    local result:${vd.sleighSize} = $pcodeName();
         |    ${vd.sleighWriter("result")}
+        |    vfpuConsumePrefixes();
         |}
       """.trimMargin()
       )
@@ -417,6 +418,7 @@ private class InstructionGeneratorOp2(
         |    local op1:${vs.sleighSize} = ${vs.sleighReader};
         |    local result:${vd.sleighSize} = $pcodeName(op1);
         |    ${vd.sleighWriter("result")}
+        |    vfpuConsumePrefixes();
         |}
         |
       """.trimMargin()
@@ -469,16 +471,33 @@ private class InstructionGeneratorOp3(
     }
     builder.append("${vd.matcher} & ${vs.matcher} & ${vt.matcher}")
     if (GENERATE_IMPLEMENTATION) {
-      builder.append(
-        """   {
-        |    local op1:${vs.sleighSize} = ${vs.sleighReader};
-        |    local op2:${vt.sleighSize} = ${vt.sleighReader};
-        |    local result:${vd.sleighSize} = $pcodeName(op1, op2);
-        |    ${vd.sleighWriter("result")}
-        |}
-        |
-      """.trimMargin()
-      )
+      if (name == "vadd" && variant == Variant.Q) {
+        // Retain destination and prefix dependencies until lane semantics replace the opaque operation.
+        builder.append(
+          """   {
+          |    local op1:16 = vfpuReadQ(vs);
+          |    local op2:16 = vfpuReadQ(vt);
+          |    local previous:16 = vfpuReadQ(vd);
+          |    local result:16 = vadd_q(previous, op1, op2, SPFX, TPFX, DPFX);
+          |    vfpuWriteQ(vd, result[0,32], result[32,32], result[64,32], result[96,32]);
+          |    vfpuConsumePrefixes();
+          |}
+          |
+        """.trimMargin()
+        )
+      } else {
+        builder.append(
+          """   {
+          |    local op1:${vs.sleighSize} = ${vs.sleighReader};
+          |    local op2:${vt.sleighSize} = ${vt.sleighReader};
+          |    local result:${vd.sleighSize} = $pcodeName(op1, op2);
+          |    ${vd.sleighWriter("result")}
+          |    vfpuConsumePrefixes();
+          |}
+          |
+        """.trimMargin()
+        )
+      }
     } else {
       builder.append("   unimpl\n")
     }
@@ -532,6 +551,7 @@ private class InstructionGeneratorOp3Imm(
         |    local op1:${vs.sleighSize} = ${vs.sleighReader};
         |    local result:${vd.sleighSize} = $pcodeName(op1, $immName:$immSize);
         |    ${vd.sleighWriter("result")}
+        |    vfpuConsumePrefixes();
         |}
         |
       """.trimMargin()
